@@ -77,6 +77,23 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Check streak on load
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const last = state.stats.lastStudyDate;
+
+    if (last && last !== today && last !== yesterday) {
+      setState(prev => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          streak: 0
+        }
+      }));
+    }
+  }, []);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -91,18 +108,27 @@ export default function App() {
 
   const updateStreak = () => {
     const today = new Date().toDateString();
-    const last = state.stats.lastStudyDate;
-    if (last === today) return;
-
     const yesterday = new Date(Date.now() - 86400000).toDateString();
-    setState(prev => ({
-      ...prev,
-      stats: {
-        ...prev.stats,
-        streak: last === yesterday ? prev.stats.streak + 1 : 1,
-        lastStudyDate: today
+    
+    setState(prev => {
+      const last = prev.stats.lastStudyDate;
+      if (last === today) return prev;
+
+      const newStreak = last === yesterday ? prev.stats.streak + 1 : 1;
+      
+      if (newStreak > prev.stats.streak) {
+        showToast(`🔥 ${newStreak} Day Streak! Keep it up!`);
       }
-    }));
+
+      return {
+        ...prev,
+        stats: {
+          ...prev.stats,
+          streak: newStreak,
+          lastStudyDate: today
+        }
+      };
+    });
   };
 
   return (
@@ -121,8 +147,19 @@ export default function App() {
           <NavTab active={activePage === 'ai'} onClick={() => setActivePage('ai')} icon={<Sparkles size={16} />} label="AI Tutor" />
         </div>
 
-        <div className="flex items-center gap-2 bg-blush rounded-full px-4 py-1.5 text-sm font-semibold text-pink-600">
-          <Flame size={16} className="text-pink-500" />
+        <div className={cn(
+          "flex items-center gap-2 bg-blush rounded-full px-4 py-1.5 text-sm font-semibold transition-all",
+          state.stats.streak > 0 ? "text-pink-600 ring-2 ring-pink-100" : "text-text-light"
+        )}>
+          <motion.div
+            animate={state.stats.streak > 0 ? { 
+              scale: [1, 1.2, 1],
+              filter: ["drop-shadow(0 0 0px #ec4899)", "drop-shadow(0 0 8px #ec4899)", "drop-shadow(0 0 0px #ec4899)"]
+            } : {}}
+            transition={{ repeat: Infinity, duration: 2 }}
+          >
+            <Flame size={16} className={state.stats.streak > 0 ? "text-pink-500" : "text-text-light"} />
+          </motion.div>
           <span>{state.stats.streak} day streak</span>
         </div>
       </nav>
