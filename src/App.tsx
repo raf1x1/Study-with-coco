@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { 
   Home, 
   Upload, 
@@ -452,33 +453,48 @@ function DeckCard({ deck, onStudy, onEdit, onDelete }: { deck: Deck, onStudy: ()
   const progress = deck.cards.length > 0 ? Math.min(100, Math.round(((deck.studied || 0) / deck.cards.length) * 100)) : 0;
 
   return (
-    <div className="bg-white border border-rose-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-pink-300 to-pink-500" />
-      
-      <div className="text-3xl mb-3">{deck.icon || '📚'}</div>
-      <h3 className="font-bold text-text-dark mb-1">{deck.name}</h3>
-      <div className="text-xs text-text-light mb-4">
-        {deck.cards.length} cards {deck.fromFile && '· 📄 From file'}
-      </div>
-      
-      <div className="space-y-1 mb-6">
-        <div className="flex justify-between text-[10px] font-bold text-text-light uppercase">
-          <span>Progress</span>
-          <span>{progress}%</span>
-        </div>
-        <div className="h-1.5 bg-rose-50 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            className="h-full bg-gradient-to-r from-pink-300 to-pink-500"
+    <div className="bg-white border border-rose-100 rounded-3xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group flex flex-col">
+      {deck.coverImage ? (
+        <div className="h-24 w-full overflow-hidden relative">
+          <img 
+            src={deck.coverImage} 
+            alt={deck.name} 
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            referrerPolicy="no-referrer"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          <div className="absolute bottom-2 left-4 text-2xl">{deck.icon || '📚'}</div>
         </div>
-      </div>
+      ) : (
+        <div className="h-1 bg-gradient-to-r from-pink-300 to-pink-500 w-full" />
+      )}
+      
+      <div className="p-6 pt-4 flex-1 flex flex-col">
+        {!deck.coverImage && <div className="text-3xl mb-3">{deck.icon || '📚'}</div>}
+        <h3 className="font-bold text-text-dark mb-1 line-clamp-1">{deck.name}</h3>
+        <div className="text-xs text-text-light mb-4">
+          {deck.cards.length} cards {deck.fromFile && '· 📄 From file'}
+        </div>
+        
+        <div className="space-y-1 mb-6 mt-auto">
+          <div className="flex justify-between text-[10px] font-bold text-text-light uppercase">
+            <span>Progress</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 bg-rose-50 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              className="h-full bg-gradient-to-r from-pink-300 to-pink-500"
+            />
+          </div>
+        </div>
 
-      <div className="flex gap-2">
-        <button onClick={onStudy} className="flex-1 bg-pink-500 text-white text-xs font-bold py-2 rounded-xl hover:bg-pink-600 transition-colors">Study</button>
-        <button onClick={onEdit} className="p-2 bg-blush text-pink-600 rounded-xl hover:bg-pink-100 transition-colors"><Edit2 size={16} /></button>
-        <button onClick={onDelete} className="p-2 bg-rose-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"><Trash2 size={16} /></button>
+        <div className="flex gap-2">
+          <button onClick={onStudy} className="flex-1 bg-pink-500 text-white text-xs font-bold py-2 rounded-xl hover:bg-pink-600 transition-colors">Study</button>
+          <button onClick={onEdit} className="p-2 bg-blush text-pink-600 rounded-xl hover:bg-pink-100 transition-colors"><Edit2 size={16} /></button>
+          <button onClick={onDelete} className="p-2 bg-rose-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"><Trash2 size={16} /></button>
+        </div>
       </div>
     </div>
   );
@@ -537,7 +553,8 @@ function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep, showToa
           studied: 0,
           correct: 0,
           lastStudied: null,
-          fromFile: file?.name
+          fromFile: file?.name,
+          coverImage: `https://picsum.photos/seed/${encodeURIComponent(deckName || 'study')}/1200/800`
         };
         onDeckCreated(deck);
         showToast(`✨ Generated ${cards.length} flashcards!`);
@@ -564,7 +581,8 @@ function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep, showToa
           studied: 0,
           correct: 0,
           lastStudied: null,
-          fromFile: file?.name
+          fromFile: file?.name,
+          coverImage: `https://picsum.photos/seed/${encodeURIComponent(deckName || 'quiz')}/1200/800`
         };
         onDeckCreated(deck);
         showToast(`✨ Generated ${quizQuestions.length} quiz questions!`);
@@ -1027,7 +1045,8 @@ function CreatePage({ editDeck, onSave, onCancel, showToast }: { editDeck?: Deck
       cards: validCards,
       studied: editDeck?.studied || 0,
       correct: editDeck?.correct || 0,
-      lastStudied: editDeck?.lastStudied || null
+      lastStudied: editDeck?.lastStudied || null,
+      coverImage: editDeck?.coverImage || `https://picsum.photos/seed/${encodeURIComponent(name)}/1200/800`
     });
   };
 
@@ -1196,9 +1215,13 @@ function AITutorPage({ decks }: { decks: Deck[] }) {
       
       // In a real app we'd use the chat history properly, but for simplicity:
       const response = await ai.models.generateContent({
-        model: MODELS.flash,
+        model: MODELS.pro,
         contents: [...history.map(h => h.content), text].join('\n'),
-        config: { systemInstruction }
+        config: { 
+          systemInstruction,
+          // Pro model might need a bit more thinking for "better" responses
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
+        }
       });
 
       setMessages(prev => [...prev, { role: 'ai', text: response.text || "Sorry, I'm a bit sleepy. Can you repeat that? 🌸" }]);

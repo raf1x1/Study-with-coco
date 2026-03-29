@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -11,6 +11,7 @@ export const getAI = () => {
 
 export const MODELS = {
   flash: "gemini-3-flash-preview",
+  lite: "gemini-3.1-flash-lite-preview",
   pro: "gemini-3.1-pro-preview",
 };
 
@@ -23,9 +24,10 @@ STUDY MATERIAL:
 ${content}`;
 
   const response = await ai.models.generateContent({
-    model: MODELS.flash,
+    model: MODELS.lite,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
       systemInstruction: `You are an expert educator. Your task is to create exactly ${count} flashcards in JSON format. Do not return fewer than ${count} items.`,
       responseMimeType: "application/json",
       responseSchema: {
@@ -60,9 +62,10 @@ STUDY MATERIAL:
 ${content}`;
 
   const response = await ai.models.generateContent({
-    model: MODELS.flash,
+    model: MODELS.lite,
     contents: prompt,
     config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
       systemInstruction: `You are an expert educator. Your task is to create exactly ${count} multiple-choice questions in JSON format. Each question must have exactly 4 options. Do not return fewer than ${count} items.`,
       responseMimeType: "application/json",
       responseSchema: {
@@ -101,8 +104,11 @@ Answer: ${back}
 Just the hint, nothing else.`;
 
   const response = await ai.models.generateContent({
-    model: MODELS.flash,
+    model: MODELS.lite,
     contents: prompt,
+    config: {
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }
+    }
   });
 
   return response.text;

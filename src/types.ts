@@ -17,6 +17,7 @@ export interface Deck {
   correct: number;
   lastStudied: number | null;
   fromFile?: string;
+  coverImage?: string;
 }
 
 export interface QuizQuestion {
