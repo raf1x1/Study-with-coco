@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Playfair Display", serif;
+  --font-body: "DM Sans", sans-serif;
+
+  --color-pink-50: #fff0f5;
+  --color-pink-100: #ffd6e7;
+  --color-pink-200: #ffadd2;
+  --color-pink-300: #ff85c2;
+  --color-pink-400: #f759ab;
+  --color-pink-500: #eb2f96;
+  --color-pink-600: #c41d7f;
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-blush: #fde8f0;
+  --color-cream: #fffaf9;
+  --color-text-dark: #2d1a26;
+  --color-text-mid: #7a4060;
+  --color-text-light: #b57ea0;
+}
+
+@layer base {
+  body {
+    @apply font-body bg-cream text-text-dark min-h-screen overflow-x-hidden;
+  }
+
+  body::before {
+    content: '';
+    @apply fixed -top-[120px] -right-[100px] w-[400px] h-[400px] pointer-events-none z-0;
+    background: radial-gradient(circle, #ffd6e7 0%, transparent 70%);
+  }
+
+  body::after {
+    content: '';
+    @apply fixed -bottom-[100px] -left-[80px] w-[350px] h-[350px] pointer-events-none z-0;
+    background: radial-gradient(circle, #ffe0ef 0%, transparent 70%);
+  }
+}
+
+.fc-inner {
+  transform-style: preserve-3d;
+}
+
+.fc-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
