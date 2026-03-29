@@ -1202,33 +1202,27 @@ function AITutorPage({ decks }: { decks: Deck[] }) {
         systemInstruction += `\n\nStudent is studying deck "${selectedDeck.name}":\n${selectedDeck.cards.map(c => `Q: ${c.front} | A: ${c.back}`).join('\n')}\nHelp study these. Quiz one question at a time if asked.`;
       }
 
-      const chat = ai.chats.create({
-        model: MODELS.flash,
-        config: { systemInstruction }
-      });
-
       // Send history
       const history = messages.slice(-6).map(m => ({
         role: m.role === 'ai' ? 'assistant' : 'user',
         content: m.text
       }));
       
-      // In a real app we'd use the chat history properly, but for simplicity:
       const response = await ai.models.generateContent({
-        model: MODELS.pro,
+        model: MODELS.flash,
         contents: [...history.map(h => h.content), text].join('\n'),
         config: { 
           systemInstruction,
-          // Pro model might need a bit more thinking for "better" responses
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
         }
       });
 
       setMessages(prev => [...prev, { role: 'ai', text: response.text || "Sorry, I'm a bit sleepy. Can you repeat that? 🌸" }]);
     } catch (error: any) {
+      console.error("AI Tutor Error:", error);
       const msg = error.message?.includes("GEMINI_API_KEY") 
         ? "🌸 Please ensure your GEMINI_API_KEY is configured."
-        : "Oops, connection issue 💖 Try again!";
+        : `Oops, connection issue 💖 Try again! (${error.message || 'Unknown error'})`;
       setMessages(prev => [...prev, { role: 'ai', text: msg }]);
     } finally {
       setIsTyping(false);
