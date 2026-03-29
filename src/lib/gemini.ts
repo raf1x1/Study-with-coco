@@ -16,10 +16,8 @@ export const MODELS = {
 
 export async function generateFlashcards(content: string, count: number, focus?: string) {
   const ai = getAI();
-  const prompt = `Create exactly ${count} high-quality study flashcards from the material below.${focus ? ` Focus on: ${focus}.` : ""}
-Return ONLY a valid JSON array with no other text, preamble, or backticks:
-[{"front":"Clear question here","back":"Concise answer here"}]
-Make varied questions covering key concepts. Answers should be complete but brief.
+  const prompt = `Generate exactly ${count} high-quality study flashcards from the provided material.${focus ? ` Focus on: ${focus}.` : ""}
+Make sure to cover different aspects of the content. Each flashcard should have a clear question on the "front" and a concise, accurate answer on the "back".
 
 STUDY MATERIAL:
 ${content}`;
@@ -28,14 +26,15 @@ ${content}`;
     model: MODELS.flash,
     contents: prompt,
     config: {
+      systemInstruction: `You are an expert educator. Your task is to create exactly ${count} flashcards in JSON format. Do not return fewer than ${count} items.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.ARRAY,
         items: {
           type: Type.OBJECT,
           properties: {
-            front: { type: Type.STRING },
-            back: { type: Type.STRING },
+            front: { type: Type.STRING, description: "The question or term to study" },
+            back: { type: Type.STRING, description: "The answer or definition" },
           },
           required: ["front", "back"],
         },
@@ -43,16 +42,19 @@ ${content}`;
     },
   });
 
-  return JSON.parse(response.text || "[]");
+  try {
+    const result = JSON.parse(response.text || "[]");
+    return Array.isArray(result) ? result : [result];
+  } catch (e) {
+    console.error("Failed to parse flashcards:", e);
+    return [];
+  }
 }
 
 export async function generateQuiz(content: string, count: number, focus?: string) {
   const ai = getAI();
-  const prompt = `Create exactly ${count} multiple-choice questions from the provided material.${focus ? ` Focus on: ${focus}.` : ""}
-Each must have exactly 4 answer options with one correct answer.
-Return ONLY a valid JSON array with no other text, preamble, or backticks:
-[{"question":"Question text?","options":["A","B","C","D"],"correct":0,"explanation":"Brief reason why A is correct"}]
-"correct" is the 0-based index of the right answer.
+  const prompt = `Generate exactly ${count} multiple-choice quiz questions from the provided material.${focus ? ` Focus on: ${focus}.` : ""}
+Each question must have exactly 4 options and one clear correct answer.
 
 STUDY MATERIAL:
 ${content}`;
@@ -61,6 +63,7 @@ ${content}`;
     model: MODELS.flash,
     contents: prompt,
     config: {
+      systemInstruction: `You are an expert educator. Your task is to create exactly ${count} multiple-choice questions in JSON format. Each question must have exactly 4 options. Do not return fewer than ${count} items.`,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.ARRAY,
@@ -72,8 +75,8 @@ ${content}`;
               type: Type.ARRAY,
               items: { type: Type.STRING },
             },
-            correct: { type: Type.INTEGER },
-            explanation: { type: Type.STRING },
+            correct: { type: Type.INTEGER, description: "0-based index of the correct option" },
+            explanation: { type: Type.STRING, description: "Why the answer is correct" },
           },
           required: ["question", "options", "correct", "explanation"],
         },
@@ -81,7 +84,13 @@ ${content}`;
     },
   });
 
-  return JSON.parse(response.text || "[]");
+  try {
+    const result = JSON.parse(response.text || "[]");
+    return Array.isArray(result) ? result : [result];
+  } catch (e) {
+    console.error("Failed to parse quiz:", e);
+    return [];
+  }
 }
 
 export async function getAIHint(front: string, back: string) {

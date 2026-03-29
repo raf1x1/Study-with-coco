@@ -190,10 +190,10 @@ export default function App() {
                 setState(prev => ({ ...prev, decks: [...prev.decks, deck] }));
                 logActivity(`Generated deck "${deck.name}" from file`);
                 setActivePage('study');
-                showToast(`Deck "${deck.name}" created! ✨`);
               }}
               setIsProcessing={setIsProcessing}
               setProcessingStep={setProcessingStep}
+              showToast={showToast}
             />
           )}
           {activePage === 'study' && (
@@ -252,6 +252,7 @@ export default function App() {
                 showToast(editDeckId ? 'Deck updated! ✅' : 'Deck created! 🎉');
               }}
               onCancel={() => { setEditDeckId(null); setActivePage('home'); }}
+              showToast={showToast}
             />
           )}
           {activePage === 'ai' && (
@@ -485,7 +486,7 @@ function DeckCard({ deck, onStudy, onEdit, onDelete }: { deck: Deck, onStudy: ()
 
 // --- Upload Page ---
 
-function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep }: { onDeckCreated: (deck: Deck) => void, setIsProcessing: (v: boolean) => void, setProcessingStep: (v: string) => void }) {
+function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep, showToast }: { onDeckCreated: (deck: Deck) => void, setIsProcessing: (v: boolean) => void, setProcessingStep: (v: string) => void, showToast: (msg: string) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [genType, setGenType] = useState<'fc' | 'qz'>('fc');
@@ -523,6 +524,10 @@ function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep }: { onD
       if (genType === 'fc') {
         setProcessingStep('Generating flashcards...');
         const cards = await generateFlashcards(fileContent, itemCount, focus);
+        if (cards.length === 0) {
+          alert('AI could not generate any cards from this content. Try a different file or more text.');
+          return;
+        }
         const deck: Deck = {
           id: 'dk_' + Date.now(),
           name: deckName || 'New Deck',
@@ -535,11 +540,14 @@ function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep }: { onD
           fromFile: file?.name
         };
         onDeckCreated(deck);
+        showToast(`✨ Generated ${cards.length} flashcards!`);
       } else {
         setProcessingStep('Building quiz questions...');
-        // Quiz logic would be similar but maybe a different view
-        // For now, let's just do flashcards as the primary feature
         const quizQuestions = await generateQuiz(fileContent, itemCount, focus);
+        if (quizQuestions.length === 0) {
+          alert('AI could not generate any quiz questions from this content.');
+          return;
+        }
         const deck: Deck = {
           id: 'dk_' + Date.now(),
           name: deckName || 'Quiz Deck',
@@ -559,6 +567,7 @@ function UploadPage({ onDeckCreated, setIsProcessing, setProcessingStep }: { onD
           fromFile: file?.name
         };
         onDeckCreated(deck);
+        showToast(`✨ Generated ${quizQuestions.length} quiz questions!`);
       }
     } catch (error) {
       console.error(error);
@@ -968,7 +977,7 @@ function StudySession({ deck, onFinish, onExit }: { deck: Deck, onFinish: (resul
 
 // --- Create Page ---
 
-function CreatePage({ editDeck, onSave, onCancel }: { editDeck?: Deck, onSave: (deck: Deck) => void, onCancel: () => void }) {
+function CreatePage({ editDeck, onSave, onCancel, showToast }: { editDeck?: Deck, onSave: (deck: Deck) => void, onCancel: () => void, showToast: (msg: string) => void }) {
   const [name, setName] = useState(editDeck?.name || '');
   const [desc, setDesc] = useState(editDeck?.desc || '');
   const [icon, setIcon] = useState(editDeck?.icon || '📚');
@@ -987,12 +996,17 @@ function CreatePage({ editDeck, onSave, onCancel }: { editDeck?: Deck, onSave: (
     setIsGenerating(true);
     try {
       const generated = await generateFlashcards(`Topic: ${aiTopic}`, 8);
-      setCards(prev => [
-        ...prev.filter(c => c.front || c.back),
-        ...generated.map((c: any) => ({ ...c, id: Math.random().toString(36).slice(2) }))
-      ]);
-      if (!name) setName(aiTopic);
-      setAiTopic('');
+      if (generated.length > 0) {
+        setCards(prev => [
+          ...prev.filter(c => c.front || c.back),
+          ...generated.map((c: any) => ({ ...c, id: Math.random().toString(36).slice(2) }))
+        ]);
+        if (!name) setName(aiTopic);
+        showToast(`✨ Added ${generated.length} cards for ${aiTopic}!`);
+        setAiTopic('');
+      } else {
+        showToast("🌸 AI couldn't generate cards for that topic.");
+      }
     } catch (error) {
       alert('AI generation failed. Try again!');
     } finally {
